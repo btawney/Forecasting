@@ -20,76 +20,75 @@ def check(label, actual, shouldBe):
 def test001():
 	s = Scenario([
 		Event([
-			Outcome(0.01, ["ServerOverheats"]),
-			Outcome(0.99, ["~ServerOverheats"])
+			Outcome(0.01, ["A"]),
+			Outcome(0.99, ["~A"])
 			]),
 		Event([
-			Outcome(0.9, ["Ws1KE33", "Ws2KE33", "Ws3KE33"])
+			Outcome(0.9, ["Ws1B", "Ws2B", "Ws3B"])
 			], [
-			"ServerOverheats"
+			"A"
 			]),
 
 		Event([
-			Outcome(0.05, ["Ws1Venus"]),
-			Outcome(0.95, ["~Ws1Venus"])
+			Outcome(0.05, ["Ws1C"]),
+			Outcome(0.95, ["~Ws1C"])
 			]),
 		Event([
-			Outcome(0.4, ["Ws1KE33"])
+			Outcome(0.4, ["Ws1B"])
 			], [
-			"Ws1Venus",
-			"~ServerOverheats"
+			"Ws1C",
+			"~A"
 			]),
 		Event([
-			Outcome(0.01, ["Ws1KE33"])
+			Outcome(0.01, ["Ws1B"])
 			], [
-			"~Ws1Venus",
-			"~ServerOverheats"
+			"~Ws1C",
+			"~A"
 			]),
 
 		Event([
-			Outcome(0.05, ["Ws2Venus"]),
-			Outcome(0.95, ["~Ws2Venus"])
+			Outcome(0.05, ["Ws2C"]),
+			Outcome(0.95, ["~Ws2C"])
 			]),
 		Event([
-			Outcome(0.4, ["Ws2KE33"])
+			Outcome(0.4, ["Ws2B"])
 			], [
-			"Ws2Venus",
-			"~ServerOverheats"
+			"Ws2C",
+			"~A"
 			]),
 		Event([
-			Outcome(0.01, ["Ws2KE33"])
+			Outcome(0.01, ["Ws2B"])
 			], [
-			"~Ws2Venus",
-			"~ServerOverheats"
+			"~Ws2C",
+			"~A"
 			]),
 
 		Event([
-			Outcome(0.05, ["Ws3Venus"]),
-			Outcome(0.95, ["~Ws3Venus"])
+			Outcome(0.05, ["Ws3C"]),
+			Outcome(0.95, ["~Ws3C"])
 			]),
 		Event([
-			Outcome(0.4, ["Ws3KE33"])
+			Outcome(0.4, ["Ws3B"])
 			], [
-			"Ws3Venus",
-			"~ServerOverheats"
+			"Ws3C",
+			"~A"
 			]),
 		Event([
-			Outcome(0.01, ["Ws3KE33"])
+			Outcome(0.01, ["Ws3B"])
 			], [
-			"~Ws3Venus",
-			"~ServerOverheats"
+			"~Ws3C",
+			"~A"
 			])
 		])
 
-	check("001.1", s.probability(["ServerOverheats"], ["Ws1KE33"]), 0.235571260306)
-	check("001.2", s.probability(["Ws1Venus"],        ["Ws1KE33"]), 0.530035335689)
-	check("001.3", s.probability(["Ws3KE33"],         ["Ws1KE33"]), 0.258121908127)
-	check("001.4", s.probability(["Ws1Venus"],        ["Ws1KE33", "ServerOverheats"]), 0.05)
-	check("001.5", s.probability(["ServerOverheats"], ["Ws1KE33", "Ws1Venus"]), 0.0222222222)
-	check("001.6", s.probability(["Ws3KE33"],         ["Ws1KE33", "Ws1Venus"]), 0.051066666666666)
-	check("001.7", s.probability(["ServerOverheats"], ["Ws1KE33", "Ws1Venus", "Ws2KE33", "Ws2Venus"]), 0.0537634408602150)
-	check("001.8", s.probability(["Ws3KE33"],         ["Ws1KE33", "Ws1Venus", "Ws2KE33", "Ws2Venus"]), 0.08167741935483870)
-	check("001.9", s.probability(["ServerOverheats"], ["Ws1KE33", "Ws1Venus", "Ws2KE33", "Ws2Venus", "Ws3KE33", "Ws3Venus"]), 0.1243781094527363)
-
+	check("001.1", s.probability(["A"],    ["Ws1B"]), 0.235571260306)
+	check("001.2", s.probability(["Ws1C"], ["Ws1B"]), 0.530035335689)
+	check("001.3", s.probability(["Ws3B"], ["Ws1B"]), 0.258121908127)
+	check("001.4", s.probability(["Ws1C"], ["Ws1B", "A"]), 0.05)
+	check("001.5", s.probability(["A"],    ["Ws1B", "Ws1C"]), 0.0222222222)
+	check("001.6", s.probability(["Ws3B"], ["Ws1B", "Ws1C"]), 0.051066666666666)
+	check("001.7", s.probability(["A"],    ["Ws1B", "Ws1C", "Ws2B", "Ws2C"]), 0.0537634408602150)
+	check("001.8", s.probability(["Ws3B"], ["Ws1B", "Ws1C", "Ws2B", "Ws2C"]), 0.08167741935483870)
+	check("001.9", s.probability(["A"],    ["Ws1B", "Ws1C", "Ws2B", "Ws2C", "Ws3B", "Ws3C"]), 0.1243781094527363)
 
 test001()

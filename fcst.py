@@ -2,7 +2,6 @@
 
 class Scenario (object):
 	events = []
-	allCases = []
 
 	def __init__(self, es):
 		self.events = es
@@ -23,27 +22,28 @@ class Scenario (object):
 		else:
 			return numerator / denominator
 
-	_caseLookup = None
+	_allCases = None
 	def cases(self):
-		if self._caseLookup is None:
-			self._caseLookup = {}
-			self._cases(1.0, [], [])
-			for cKey in self._caseLookup:
-				self.allCases.append(self._caseLookup[cKey])
-		return self.allCases
+		if self._allCases is None:
+			lookup = {}
+			self._cases(1.0, self.events, [], lookup)
+			self._allCases = []
+			for cKey in lookup:
+				self._allCases.append(lookup[cKey])
+		return self._allCases
 
-	def _cases(self, probability, eventsProcessed, signalsRaised):
+	def _cases(self, probability, unprocessedEvents, signalsRaised, caseLookup):
 		# Find first unprocessed event that has been triggered
 		nextEvent = None
-		for e in self.events:
-			if e not in eventsProcessed:
-				if e.isTriggered(signalsRaised):
-					nextEvent = e
-					break
+		idx = 0
+		for e in unprocessedEvents:
+			if e.isTriggered(signalsRaised):
+				nextEvent = e
+				break
+			idx += 1
 
 		if nextEvent is not None:
-			nextEventsProcessed = list(eventsProcessed)
-			nextEventsProcessed.append(nextEvent)
+			nextUnprocessedEvents = unprocessedEvents[0:idx] + unprocessedEvents[idx + 1:]
 
 			for o in nextEvent.outcomes:
 				nextSignalsRaised = list(signalsRaised)
@@ -52,7 +52,10 @@ class Scenario (object):
 					if not s in nextSignalsRaised:
 						nextSignalsRaised.append(s)
 
-				self._cases(probability * o.probability, nextEventsProcessed, nextSignalsRaised)
+				self._cases(probability * o.probability,
+					nextUnprocessedEvents,
+					nextSignalsRaised,
+					caseLookup)
 		else:
 			# Calculate signature from signals
 			signature = ""
@@ -60,11 +63,11 @@ class Scenario (object):
 			for s in sorted(signalsRaised):
 				signature += s + "+"
 
-			if signature in self._caseLookup:
-				self._caseLookup[signature].probability += probability
+			if signature in caseLookup:
+				caseLookup[signature].probability += probability
 			else:
 				newCase = Case(signalsRaised, probability)
-				self._caseLookup[signature] = newCase
+				caseLookup[signature] = newCase
 
 
 
@@ -84,7 +87,6 @@ class Case (object):
 
 
 class Event (object):
-	scenario = None
 	outcomes = []
 	triggers = []
 
@@ -106,7 +108,6 @@ class Event (object):
 			if t not in ss:
 				return False
 		return True
-
 
 
 class Outcome (object):

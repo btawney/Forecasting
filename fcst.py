@@ -23,16 +23,16 @@ class Scenario (object):
 			return numerator / denominator
 
 	_allCases = None
-	def cases(self):
+	def cases(self, turns = 1):
 		if self._allCases is None:
 			lookup = {}
-			self._cases(1.0, self.events, [], lookup)
+			self._cases(1.0, self.events, [], lookup, [], turns)
 			self._allCases = []
 			for cKey in lookup:
 				self._allCases.append(lookup[cKey])
 		return self._allCases
 
-	def _cases(self, probability, unprocessedEvents, signalsRaised, caseLookup):
+	def _cases(self, probability, unprocessedEvents, signalsRaised, caseLookup, defaultEvents, turns):
 		# Find first unprocessed event that has been triggered
 		nextEvent = None
 		idx = 0
@@ -45,7 +45,10 @@ class Scenario (object):
 		if nextEvent is not None:
 			nextUnprocessedEvents = unprocessedEvents[0:idx] + unprocessedEvents[idx + 1:]
 
+			defaultProbability = 1.0
 			for o in nextEvent.outcomes:
+				defaultProbability -= o.probability
+
 				nextSignalsRaised = list(signalsRaised)
 
 				for s in o.signals:
@@ -55,20 +58,40 @@ class Scenario (object):
 				self._cases(probability * o.probability,
 					nextUnprocessedEvents,
 					nextSignalsRaised,
-					caseLookup)
+					caseLookup,
+					defaultEvents,
+					turns)
+
+			# If default probability is not zero then process the default outcome
+			if defaultProbability > 0:
+				self._cases(probability * defaultProbability,
+					nextUnprocessedEvents,
+					signalsRaised,
+					caseLookup,
+					defaultEvents + [nextEvent],
+					turns)
 		else:
-			# Calculate signature from signals
-			signature = ""
+			# If this is the last turn, or if there are no default events, then add to cases
+			if turns == 1 or len(defaultEvents) == 0 or probability == 0:
+				# Calculate signature from signals
+				signature = ""
 
-			for s in sorted(signalsRaised):
-				signature += s + "+"
+				for s in sorted(signalsRaised):
+					signature += s + "+"
 
-			if signature in caseLookup:
-				caseLookup[signature].probability += probability
+				if signature in caseLookup:
+					caseLookup[signature].probability += probability
+				else:
+					newCase = Case(signalsRaised, probability)
+					caseLookup[signature] = newCase
 			else:
-				newCase = Case(signalsRaised, probability)
-				caseLookup[signature] = newCase
-
+				# Process the next turn using the default events as the unprocessed events
+				self._cases(probability,
+					defaultEvents,
+					signalsRaised,
+					caseLookup,
+					[],
+					turns - 1)
 
 
 class Case (object):
@@ -94,14 +117,6 @@ class Event (object):
 		self.outcomes = os
 		if trigs is not None:
 			self.triggers = trigs
-
-		# Make sure a default outcome exists
-		d = 1.0
-		for o in os:
-			d -= o.probability
-
-		if d > 0.0:
-			self.outcomes.append(Outcome(d, []))
 
 	def isTriggered(self, ss):
 		for t in self.triggers:

@@ -8,14 +8,32 @@ from fcst import Outcome
 # Event(outcomes [, triggers])
 # Outcome(probability, signals)
 
+passCount = 0
+failCount = 0
+verbose = False
+
 def check(label, actual, shouldBe):
+	global verbose
+	global passCount
+	global failCount
+
 	if round(actual, 4) == round(shouldBe, 4):
-		print "    PASS " + label
+		if verbose:
+			print "    PASS " + label
+		passCount += 1
 	else:
 		print "*** FAIL " + label
-		print actual
-		print shouldBe
+		print "    Actual:    " + str(actual)
+		print "    Should Be: " + str(shouldBe)
+		failCount += 1
 	return None
+
+def summary():
+	global passCount
+	global failCount
+
+	print "Total Passed: " + str(passCount)
+	print "Total Failed: " + str(failCount)	
 
 def test001():
 	s = Scenario([
@@ -91,4 +109,49 @@ def test001():
 	check("001.8", s.probability(["Ws3B"], ["Ws1B", "Ws1C", "Ws2B", "Ws2C"]), 0.08167741935483870)
 	check("001.9", s.probability(["A"],    ["Ws1B", "Ws1C", "Ws2B", "Ws2C", "Ws3B", "Ws3C"]), 0.1243781094527363)
 
+def test002():
+	# Odds of at least one coin coming up heads over 8 tosses
+	# Modeled as an event (the coin toss) with one signal-generating outcome (heads)
+	s = Scenario([
+		Event([Outcome(0.5, ["Heads"])])
+		])
+	oddsOfNot = 0.5
+	for turns in range(1, 9):
+		check("002." + str(turns), s.probability(["Heads"], [], turns), 1.0 - oddsOfNot)
+		oddsOfNot *= 0.5
+
+def test003():
+	# Odds of at least one coin coming up heads over 8 tosses
+	# Modeled as an event (the coin toss) with two signal-generating outcomes, one of which is a default
+	s = Scenario([
+		Event([Outcome(0.5, ["Heads"]), Outcome(0.5, "~Heads")])
+		])
+	oddsOfNot = 0.5
+	for turns in range(1, 9):
+		check("003." + str(turns), s.probability(["Heads"], [], turns), 1.0 - oddsOfNot)
+		oddsOfNot *= 0.5
+
+
+def test004():
+	# A group event modeling the tossing of 11 coins
+	s = Scenario([
+		Event([Outcome(0.5, ["Heads"])]).Grouped(11)
+		])
+
+	def factorial(x):
+		if x > 1:
+			return x * factorial(x - 1)
+		else:
+			return 1
+
+	for coins in range(1, 12):
+		odds = factorial(11) / factorial(coins) / factorial(11 - coins) / pow(2, 11)
+		check("004." + str(coins), s.probability("Heads*" + str(coins)), odds)
+
+
 test001()
+test002()
+test003()
+test004()
+
+summary()

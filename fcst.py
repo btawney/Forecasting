@@ -6,8 +6,8 @@ class Scenario (object):
 	def __init__(self, es):
 		self.events = es
 
-	def probability(self, signals, givens = []):
-		cs =  self.cases()
+	def probability(self, signals, givens = [], turns = 1):
+		cs =  self.cases(turns)
 		numerator = 0.0
 		denominator = 0.0
 		for c in cs:
@@ -22,15 +22,13 @@ class Scenario (object):
 		else:
 			return numerator / denominator
 
-	_allCases = None
 	def cases(self, turns = 1):
-		if self._allCases is None:
-			lookup = {}
-			self._cases(1.0, self.events, [], lookup, [], turns)
-			self._allCases = []
-			for cKey in lookup:
-				self._allCases.append(lookup[cKey])
-		return self._allCases
+		lookup = {}
+		self._cases(1.0, self.events, [], lookup, [], turns)
+		allCases = []
+		for cKey in lookup:
+			allCases.append(lookup[cKey])
+		return allCases
 
 	def _cases(self, probability, unprocessedEvents, signalsRaised, caseLookup, defaultEvents, turns):
 		# Find first unprocessed event that has been triggered
@@ -51,15 +49,22 @@ class Scenario (object):
 
 				nextSignalsRaised = list(signalsRaised)
 
+				isDefaultOutcome = False
 				for s in o.signals:
+					if s[0] == "~":
+						isDefaultOutcome = True
 					if not s in nextSignalsRaised:
 						nextSignalsRaised.append(s)
+
+				nextDefaultEvents = list(defaultEvents)
+				if isDefaultOutcome:
+					nextDefaultEvents.append(nextEvent)
 
 				self._cases(probability * o.probability,
 					nextUnprocessedEvents,
 					nextSignalsRaised,
 					caseLookup,
-					defaultEvents,
+					nextDefaultEvents,
 					turns)
 
 			# If default probability is not zero then process the default outcome
@@ -77,7 +82,9 @@ class Scenario (object):
 				signature = ""
 
 				for s in sorted(signalsRaised):
-					signature += s + "+"
+					if signature != "":
+						signature += ","
+					signature += s
 
 				if signature in caseLookup:
 					caseLookup[signature].probability += probability
@@ -85,10 +92,17 @@ class Scenario (object):
 					newCase = Case(signalsRaised, probability)
 					caseLookup[signature] = newCase
 			else:
-				# Process the next turn using the default events as the unprocessed events
+				# Process the next turn. First, remove any default signals,
+				# then process a new turn with the unprocessed events and the
+				# default events
+				nonDefaultSignalsRaised = []
+				for s in signalsRaised:
+					if s[0] != "~":
+						nonDefaultSignalsRaised.append(s)
+
 				self._cases(probability,
-					defaultEvents,
-					signalsRaised,
+					unprocessedEvents + defaultEvents,
+					nonDefaultSignalsRaised,
 					caseLookup,
 					[],
 					turns - 1)
@@ -123,6 +137,93 @@ class Event (object):
 			if t not in ss:
 				return False
 		return True
+
+	def defaultProbability(self):
+		dp = 1.0
+
+		for o in self.outcomes:
+			dp -= o.probability
+		
+		if dp < 0.0:
+			return 0.0
+		
+		return dp
+
+	def CombinedWith(self, other):
+		newOutcomes = []
+
+		selfDefaultProbability = self.defaultProbability()
+		otherDefaultProbability = other.defaultProbability()
+
+		# Determine whether a default outcome should exist for either event
+		for selfOutcome in self.outcomes:
+			for otherOutcome in other.outcomes:
+				newOutcomes.append(Outcome(
+					selfOutcome.probability * otherOutcome.probability,
+					signalSummary(selfOutcome.signals + otherOutcome.signals)))
+
+			if otherDefaultProbability > 0:
+				newOutcomes.append(Outcome(
+					selfOutcome.probability * otherDefaultProbability,
+					signalSummary(selfOutcome.signals)))
+
+		if selfDefaultProbability > 0:
+			for otherOutcome in other.outcomes:
+				newOutcomes.append(Outcome(
+					selfDefaultProbability * otherOutcome.probability,
+					signalSummary(otherOutcome.signals)))
+
+			if otherDefaultProbability > 0:
+				newOutcomes.append(Outcome(
+					selfDefaultProbability * otherDefaultProbability,
+					[]))
+
+		return Event(newOutcomes)
+
+	def Grouped(self, groupSize):
+		# Build a collection of groups in powers of two
+		binaryLookup = {}
+		n = 1
+		model = Event(self.outcomes)
+		binaryLookup[n] = model
+		while n * 2 <= groupSize:
+			n *= 2
+			model = model.CombinedWith(model)
+			binaryLookup[n] = model
+
+		# Combine the appropriate generated groups to make one of the correct size
+		# note that model is already by definition one of the groups we want
+		remainder = groupSize - n
+		n /= 2
+		while remainder > 0:
+			if remainder >= n:
+				remainder -= n
+				model = model.CombinedWith(binaryLookup[n])
+			n /= 2
+
+		return model
+
+
+def signalSummary(signals):
+	tally = {}
+	for signal in signals:
+		if "*" in signal:
+			baseSignal = signal[0:signal.index("*")]
+			baseCount = int(signal[signal.index("*")+1:])
+		else:
+			baseSignal = signal
+			baseCount = 1
+
+		if baseSignal not in tally:
+			tally[baseSignal] = 0
+
+		tally[baseSignal] += baseCount
+
+	result = []
+	for signal in tally:
+		result.append(signal + "*" + str(tally[signal]))
+
+	return result
 
 
 class Outcome (object):

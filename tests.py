@@ -43,9 +43,7 @@ def test001():
 			]),
 		Event([
 			Outcome(0.9, ["Ws1B", "Ws2B", "Ws3B"])
-			], [
-			"A"
-			]),
+			]).withTriggers(["A"]),
 
 		Event([
 			Outcome(0.05, ["Ws1C"]),
@@ -53,16 +51,10 @@ def test001():
 			]),
 		Event([
 			Outcome(0.4, ["Ws1B"])
-			], [
-			"Ws1C",
-			"~A"
-			]),
+			]).withTriggers([ "Ws1C", "~A" ]),
 		Event([
 			Outcome(0.01, ["Ws1B"])
-			], [
-			"~Ws1C",
-			"~A"
-			]),
+			]).withTriggers([ "~Ws1C", "~A" ]),
 
 		Event([
 			Outcome(0.05, ["Ws2C"]),
@@ -70,16 +62,10 @@ def test001():
 			]),
 		Event([
 			Outcome(0.4, ["Ws2B"])
-			], [
-			"Ws2C",
-			"~A"
-			]),
+			]).withTriggers([ "Ws2C", "~A" ]),
 		Event([
 			Outcome(0.01, ["Ws2B"])
-			], [
-			"~Ws2C",
-			"~A"
-			]),
+			]).withTriggers([ "~Ws2C", "~A" ]),
 
 		Event([
 			Outcome(0.05, ["Ws3C"]),
@@ -87,16 +73,10 @@ def test001():
 			]),
 		Event([
 			Outcome(0.4, ["Ws3B"])
-			], [
-			"Ws3C",
-			"~A"
-			]),
+			]).withTriggers([ "Ws3C", "~A" ]),
 		Event([
 			Outcome(0.01, ["Ws3B"])
-			], [
-			"~Ws3C",
-			"~A"
-			])
+			]).withTriggers([ "~Ws3C", "~A" ])
 		])
 
 	check("001.1", s.probability(["A"],    ["Ws1B"]), 0.235571260306)
@@ -111,31 +91,29 @@ def test001():
 
 def test002():
 	# Odds of at least one coin coming up heads over 8 tosses
-	# Modeled as an event (the coin toss) with one signal-generating outcome (heads)
-	s = Scenario([
-		Event([Outcome(0.5, ["Heads"])])
-		])
+	# Modeled as eight events with one signal-generating outcome (heads)
 	oddsOfNot = 0.5
+	events = []
 	for turns in range(1, 9):
-		check("002." + str(turns), s.probability(["Heads"], [], turns), 1.0 - oddsOfNot)
+		events.append(Event([Outcome(0.5, ["Heads"])]))
+		check("002." + str(turns), Scenario(events).probability(["Heads"]), 1.0 - oddsOfNot)
 		oddsOfNot *= 0.5
 
 def test003():
 	# Odds of at least one coin coming up heads over 8 tosses
-	# Modeled as an event (the coin toss) with two signal-generating outcomes, one of which is a default
-	s = Scenario([
-		Event([Outcome(0.5, ["Heads"]), Outcome(0.5, "~Heads")])
-		])
+	# Modeled as a chain of events (the coin toss) which repeat on Tails
+	toss = Event([Outcome(0.5, ["Heads"]), Outcome(0.5, ["Tails"])])
+
 	oddsOfNot = 0.5
 	for turns in range(1, 9):
-		check("003." + str(turns), s.probability(["Heads"], [], turns), 1.0 - oddsOfNot)
+		s = Scenario(toss.chained("Tails", turns))
+		check("003." + str(turns), s.probability(["Heads"]), 1.0 - oddsOfNot)
 		oddsOfNot *= 0.5
-
 
 def test004():
 	# A group event modeling the tossing of 11 coins
 	s = Scenario([
-		Event([Outcome(0.5, ["Heads"])]).Grouped(11)
+		Event([Outcome(0.5, ["Heads"])]).grouped(11)
 		])
 
 	def factorial(x):
